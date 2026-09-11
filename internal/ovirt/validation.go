@@ -287,6 +287,31 @@ func validatePositiveInt(i interface{}, path cty.Path) diag.Diagnostics {
 	return nil
 }
 
+func validateHighAvailabilityPriority(i interface{}, path cty.Path) diag.Diagnostics {
+	val, ok := i.(int)
+	if !ok {
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       "Not an integer",
+				Detail:        "The specified value is not an integer.",
+				AttributePath: path,
+			},
+		}
+	}
+	if val < 1 || val > 100 {
+		return diag.Diagnostics{
+			diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       "Invalid high availability priority",
+				Detail:        "The high availability priority must be between 1 and 100.",
+				AttributePath: path,
+			},
+		}
+	}
+	return nil
+}
+
 func validateEnum(values []string) schema.SchemaValidateDiagFunc {
 	return func(i interface{}, path cty.Path) diag.Diagnostics {
 		val, ok := i.(string)
