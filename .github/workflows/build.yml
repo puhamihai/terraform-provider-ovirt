@@ -14,6 +14,11 @@ jobs:
         uses: actions/checkout@v4
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
+        with:
+          # Pinned: an unpinned linter silently upgrades and fails CI on untouched
+          # code. v2.13.2 reports 55 pre-existing issues (goconst, gosec,
+          # nolintlint) in files this fork does not own. Clear those before bumping.
+          version: v2.4.0
   generate:
     name: go generate
     if: ${{ github.event_name != 'schedule' }}
