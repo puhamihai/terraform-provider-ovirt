@@ -220,6 +220,18 @@ var vmSchema = map[string]*schema.Schema{
 		Description:      "Sets the HugePages setting for the VM. Must be one of: " + strings.Join(vmHugePagesValues(), ", "),
 		ValidateDiagFunc: validateHugePages,
 	},
+	"high_availability": {
+		Type:        schema.TypeBool,
+		Optional:    true,
+		Description: "If true, the VM is configured as highly available and is restarted automatically on a different host if its host fails.",
+	},
+	"high_availability_priority": {
+		Type:             schema.TypeInt,
+		Optional:         true,
+		RequiredWith:     []string{"high_availability"},
+		Description:      "Priority (1-100) for the restart queue of highly available VMs. Higher values are restarted first.",
+		ValidateDiagFunc: validateHighAvailabilityPriority,
+	},
 }
 
 func provisioningValues() []string {
@@ -331,7 +343,14 @@ func (p *provider) vmCreate(
 		}
 	}
 
-	return vmResourceUpdate(vm, data)
+	if data.Get("high_availability").(bool) || data.Get("high_availability_priority").(int) != 0 {
+		diags = p.applyVMHighAvailability(data, string(vm.ID()), diags)
+		if diags.HasError() {
+			return diags
+		}
+	}
+
+	return append(diags, vmResourceUpdate(vm, data)...)
 }
 
 func handleSoundcardEnabled(
@@ -737,7 +756,7 @@ func (p *provider) vmRead(
 			},
 		}
 	}
-	return vmResourceUpdate(vm, data)
+	return p.readVMHighAvailability(data, vmResourceUpdate(vm, data))
 }
 
 // vmResourceUpdate takes the VM object and converts it into Terraform resource data.
@@ -834,7 +853,13 @@ func (p *provider) vmUpdate(ctx context.Context, data *schema.ResourceData, _ in
 		)
 		return diags
 	}
-	return vmResourceUpdate(vm, data)
+	if data.HasChanges("high_availability", "high_availability_priority") {
+		diags = p.applyVMHighAvailability(data, data.Id(), diags)
+		if diags.HasError() {
+			return diags
+		}
+	}
+	return append(diags, vmResourceUpdate(vm, data)...)
 }
 
 func (p *provider) vmImport(ctx context.Context, data *schema.ResourceData, _ interface{}) (
