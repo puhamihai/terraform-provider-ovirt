@@ -45,6 +45,11 @@ jobs:
           go-version: stable
       - name: Set up gotestfmt
         uses: GoTestTools/gotestfmt-action@v2
+        with:
+          # Without a token the action downloads gotestfmt anonymously and shares
+          # the runner IP's API quota, which fails the whole job before a single
+          # test runs: "API rate limit exceeded for <runner ip>".
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/cache@v4
         with:
           path: |
