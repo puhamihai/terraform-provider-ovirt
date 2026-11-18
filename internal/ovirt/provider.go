@@ -104,6 +104,9 @@ type providerInterface interface {
 type provider struct {
 	testHelper ovirtclient.TestHelper
 	client     ovirtclient.Client
+	// vmHAUpdater overrides how high availability updates reach the engine. It is nil outside of
+	// tests, in which case the raw oVirt SDK connection of client is used.
+	vmHAUpdater vmHighAvailabilityUpdater
 }
 
 func (p *provider) getTestHelper() ovirtclient.TestHelper {
