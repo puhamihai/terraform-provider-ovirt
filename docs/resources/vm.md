@@ -56,6 +56,7 @@ resource "ovirt_vm" "test" {
 - `serial_console` (Boolean) Enable or disable the serial console.
 - `soundcard_enabled` (Boolean) Enable or disable the soundcard.
 - `template_disk_attachment_override` (Block Set) Override parameters for disks obtained from templates. (see [below for nested schema](#nestedblock--template_disk_attachment_override))
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
 - `vm_type` (String) Virtual machine type. Must be one of: desktop, server, high_performance
 
 ### Read-Only
@@ -77,6 +78,15 @@ Optional:
 - `format` (String) Disk format for the override. Can be 'raw' or 'cow'.
 - `provisioning` (String) Provisioning the disk. Must be one of sparse,non-sparse
 - `storage_domain_id` (String) ID of the storage domain where the new disk will be placed.
+
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String)
+- `update` (String)
 
 ## Import
 

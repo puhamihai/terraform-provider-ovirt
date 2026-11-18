@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -283,7 +284,11 @@ func (p *provider) vmResource() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: p.vmImport,
 		},
-		Schema:      vmSchema,
+		Schema: vmSchema,
+		Timeouts: &schema.ResourceTimeout{
+			Create: schema.DefaultTimeout(20 * time.Minute),
+			Update: schema.DefaultTimeout(20 * time.Minute),
+		},
 		Description: "The ovirt_vm resource creates a virtual machine in oVirt.",
 	}
 }
@@ -343,8 +348,19 @@ func (p *provider) vmCreate(
 		}
 	}
 
+	// Record the VM in state as soon as it exists. If a later step fails, Terraform keeps the VM as a
+	// tainted resource and replaces it, instead of losing track of it and failing every later apply
+	// on the duplicate name.
+	data.SetId(string(vm.ID()))
+
 	if data.Get("high_availability").(bool) || data.Get("high_availability_priority").(int) != 0 {
-		diags = p.applyVMHighAvailability(data, string(vm.ID()), diags)
+		// A cloned VM stays image_locked while the template disks are copied, and the engine rejects
+		// edits until the copy finishes.
+		vm, err = waitForVMUnlocked(ctx, client, vm.ID(), vmUnlockPollInterval)
+		if err != nil {
+			return append(diags, errorToDiag(fmt.Sprintf("wait for VM %s to be unlocked", data.Id()), err))
+		}
+		diags = p.applyVMHighAvailability(ctx, data, data.Id(), diags)
 		if diags.HasError() {
 			return diags
 		}
@@ -854,7 +870,7 @@ func (p *provider) vmUpdate(ctx context.Context, data *schema.ResourceData, _ in
 		return diags
 	}
 	if data.HasChanges("high_availability", "high_availability_priority") {
-		diags = p.applyVMHighAvailability(data, data.Id(), diags)
+		diags = p.applyVMHighAvailability(ctx, data, data.Id(), diags)
 		if diags.HasError() {
 			return diags
 		}
