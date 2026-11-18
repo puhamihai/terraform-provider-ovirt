@@ -40,6 +40,10 @@ jobs:
           go-version: stable
       - name: Check go generate
         run: ./.github/scripts/gogenerate.sh
+        env:
+          # go generate downloads the test image through the GitHub releases API. Without
+          # a token it shares the runner IP's anonymous quota and fails with HTTP 403.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   test:
     name: go test
     if: ${{ github.event_name != 'schedule' }}
